@@ -1,21 +1,23 @@
-#include <stdio.h>
-#include "FizzBuzz.h"
+#include <SDL3/SDL.h>
+#include "tinydraw/tinydraw.h"
 
 int main(void)
 {
-    printf("Hello, world!\n");
+    TinyDraw_Init();
     
-    char result[9];
-    for (int i = 1; i <= 15; i++) {
-        FizzBuzz(i, result);
+    char quit = 0;
+    SDL_Event event;
+    while (!quit) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_QUIT) {
+                quit = 1;
+            }
+        }
         
-        printf(
-            "%s\n",
-            result
-        );
+        SDL_Delay(1000 / 60);
     }
     
-    printf("Goodbye, world!\n");
+    TinyDraw_Quit();
     
     return 0;
 }
