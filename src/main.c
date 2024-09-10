@@ -7,39 +7,42 @@ int main(void)
         return 1;
     }
     
-    SDL_GPUShader* shaderVertex = TinyDraw_Load_Shader(
-        "TexturedQuad.vert",
-        0,
-        1,
-        0,
-        0,
-        SDL_GPU_SHADERSTAGE_VERTEX
-    );
-    SDL_GPUShader* shaderFragment = TinyDraw_Load_Shader(
-        "TexturedQuad.frag",
-        1,
-        0,
-        0,
-        0,
-        SDL_GPU_SHADERSTAGE_FRAGMENT
-    );
-    if (shaderVertex == NULL || shaderFragment == NULL) {
-        return 1;
-    }
+    TinyDraw_Begin_Load();
+    TinyDraw_Load_IndexBuffer();
+    SDL_GPUTexture* textureRavioli = TinyDraw_Load_Texture("ravioli.bmp");
+    TinyDraw_End_Load();
     
     char quit = 0;
     SDL_Event event;
     while (!quit) {
+        // Events
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 quit = 1;
             }
         }
         
-        // Do all the stuff here
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 32, .y = 48 },
+            (float2){ .x = 16, .y = 16 },
+            (int2){ .x = 0, .y = 0 },
+            (int2){ .x = 0, .y = 0 }
+        );
         
+        TinyDraw_Begin_Load();
+        TinyDraw_Render(
+            textureRavioli,
+            (float3){ .x = 0, .y = 0, .z = 1 },
+            NULL
+        );
+        TinyDraw_EndFrame();
+        TinyDraw_End_Load();
+        
+        // Sleep until next frame
         SDL_Delay(1000 / 60);
     }
+    
+    TinyDraw_Unload_Texture(textureRavioli);
     
     TinyDraw_Quit();
     

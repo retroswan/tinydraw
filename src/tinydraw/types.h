@@ -11,3 +11,10 @@ typedef struct float2
     float x;
     float y;
 } float2;
+
+typedef struct float3
+{
+    float x;
+    float y;
+    float z;
+} float3;
