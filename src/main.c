@@ -24,6 +24,7 @@ int main(void)
     SDL_GPUGraphicsPipeline* pipeline = TinyDraw_Create_Pipeline(vertexShader, fragmentShader);
     
     SDL_GPUTexture* texture = TinyDraw_Load_Texture("ravioli.bmp");
+    SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("ravioli_inverted.bmp");
     
     SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
     
@@ -37,14 +38,30 @@ int main(void)
             }
         }
         
+        static float camX = 0, camY = 0;
+        camX += 0.1f;
+        camY += 0.1f;
+        
+        // FIXME: all of these rendering methods should use the same cmdbuf probably?
+        
+        // Clear
+        TinyDraw_Clear(renderTarget);
+        
         TinyDraw_Stage_Sprite(
             (float2){ .x = 32, .y = 48 },
             (float2){ .x = 16, .y = 16 },
             (int2){ .x = 0, .y = 0 },
             (int2){ .x = 32, .y = 32 }
         );
-        static float camX = 0, camY = 0;
-        TinyDraw_Render(pipeline, texture, (float3){ .x = camX++, .y = camY++, .z = 1.0f }, renderTarget);
+        TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
+        
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 64, .y = 48 },
+            (float2){ .x = 16, .y = 16 },
+            (int2){ .x = 0, .y = 0 },
+            (int2){ .x = 32, .y = 32 }
+        );
+        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         TinyDraw_Stage_Sprite(
             (float2){ .x = 0, .y = 0 },
@@ -52,7 +69,7 @@ int main(void)
             (int2){ .x = 0, .y = 0 },
             (int2){ .x = 32, .y = 32 }
         );
-        TinyDraw_Render(pipeline, renderTarget, (float3){ .x = 0, .y = 0, .z = 1.0f }, NULL);
+        TinyDraw_Render(pipeline, renderTarget, (float3){ .x = 0, .y = 0, .z = 1.0f }, NULL, 1);
         
         // Sleep until next frame
         SDL_Delay(1000 / 60);
@@ -63,6 +80,7 @@ int main(void)
     
     TinyDraw_Unload_Texture(renderTarget);
     TinyDraw_Unload_Texture(texture);
+    TinyDraw_Unload_Texture(texture2);
     TinyDraw_Unload_Shader(fragmentShader);
     TinyDraw_Unload_Shader(vertexShader);
     

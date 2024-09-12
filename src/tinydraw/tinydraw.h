@@ -41,8 +41,11 @@ void TinyDraw_Render(
     SDL_GPUGraphicsPipeline* pipeline,
     SDL_GPUTexture* texture,
     float3 camera,
-    SDL_GPUTexture* renderTarget
+    SDL_GPUTexture* renderTarget,
+    char clear
 );
+
+void TinyDraw_Clear(SDL_GPUTexture* renderTarget);
 
 void TinyDraw_Destroy_Pipeline(SDL_GPUGraphicsPipeline* pipeline);
 

@@ -461,7 +461,8 @@ void TinyDraw_Render(
     SDL_GPUGraphicsPipeline* pipeline,
     SDL_GPUTexture* texture,
     float3 camera,
-    SDL_GPUTexture* renderTarget
+    SDL_GPUTexture* renderTarget,
+    char clear
 )
 {
     matrix4x4 cameraMatrix = Matrix4x4_CreateOrthographicOffCenter(
@@ -487,22 +488,28 @@ void TinyDraw_Render(
         SDL_GPUColorAttachmentInfo colorAttachmentInfo = { 0 };
         colorAttachmentInfo.texture = swapchainTexture;
         colorAttachmentInfo.clearColor = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
-        colorAttachmentInfo.loadOp = SDL_GPU_LOADOP_CLEAR;
+        // FIXME: should only clear sometimes, not sure when??
+        colorAttachmentInfo.loadOp = clear
+            ? SDL_GPU_LOADOP_CLEAR
+            : SDL_GPU_LOADOP_LOAD;
         colorAttachmentInfo.storeOp = SDL_GPU_STOREOP_STORE;
         
+        // TODO: depth stencil stuff here, where `NULL` is
         SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmdbuf, &colorAttachmentInfo, 1, NULL);
         
-        SDL_BindGPUGraphicsPipeline(renderPass, pipeline);
-        SDL_BindGPUVertexBuffers(renderPass, 0, &(SDL_GPUBufferBinding){ .buffer = vertexBuffer, .offset = 0 }, 1);
-        SDL_BindGPUIndexBuffer(renderPass, &(SDL_GPUBufferBinding){ .buffer = indexBuffer, .offset = 0 }, SDL_GPU_INDEXELEMENTSIZE_16BIT);
-        SDL_BindGPUFragmentSamplers(renderPass, 0, &(SDL_GPUTextureSamplerBinding){ .texture = texture, .sampler = sampler }, 1);
-        SDL_PushGPUVertexUniformData(
-            cmdbuf,
-            0,
-            &cameraMatrix,
-            sizeof(matrix4x4)
-        );
-        SDL_DrawGPUIndexedPrimitives(renderPass, spriteBatchCount * 6, 1, 0, 0, 0);
+        if (texture && spriteBatchCount) {
+            SDL_BindGPUGraphicsPipeline(renderPass, pipeline);
+            SDL_BindGPUVertexBuffers(renderPass, 0, &(SDL_GPUBufferBinding){ .buffer = vertexBuffer, .offset = 0 }, 1);
+            SDL_BindGPUIndexBuffer(renderPass, &(SDL_GPUBufferBinding){ .buffer = indexBuffer, .offset = 0 }, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+            SDL_BindGPUFragmentSamplers(renderPass, 0, &(SDL_GPUTextureSamplerBinding){ .texture = texture, .sampler = sampler }, 1);
+            SDL_PushGPUVertexUniformData(
+                cmdbuf,
+                0,
+                &cameraMatrix,
+                sizeof(matrix4x4)
+            );
+            SDL_DrawGPUIndexedPrimitives(renderPass, spriteBatchCount * 6, 1, 0, 0, 0);
+        }
 
         SDL_EndGPURenderPass(renderPass);
     }
@@ -510,6 +517,11 @@ void TinyDraw_Render(
     SDL_SubmitGPU(cmdbuf);
     
     spriteBatchCount = 0;
+}
+
+void TinyDraw_Clear(SDL_GPUTexture* renderTarget)
+{
+    TinyDraw_Render(NULL, NULL, (float3){}, renderTarget, 1);
 }
 
 void TinyDraw_Destroy_Pipeline(SDL_GPUGraphicsPipeline* pipeline)
