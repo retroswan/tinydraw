@@ -25,6 +25,7 @@ int main(void)
     
     SDL_GPUTexture* texture = TinyDraw_Load_Texture("ravioli.bmp", NULL, NULL);
     SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("ravioli_inverted.bmp", NULL, NULL);
+    // SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("tiles_tiny_sample_2.png", NULL, NULL);
     
     SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
     
