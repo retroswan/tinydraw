@@ -6,7 +6,6 @@
 #define STBI_MALLOC SDL_malloc
 #define STBI_REALLOC SDL_realloc
 #define STBI_FREE SDL_free
-#define STBI_ONLY_HDR
 #include "../vendor/stb_image.h"
 
 #define SPRITE_COUNT 1024
@@ -262,34 +261,28 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
     int* height
 )
 {
-    SDL_Surface* imageData;
-    SDL_PixelFormat format = SDL_PIXELFORMAT_ABGR8888;
     SDL_snprintf(fullPath, sizeof(fullPath), "%sContent/Images/%s", basePath, fileName);
-    imageData = SDL_LoadBMP(fullPath);
-    if (imageData == NULL) {
-        SDL_Log("Failed to load BMP: %s", SDL_GetError());
+    int w, h, comp;
+    // FIXME: use `STBI_rgb_alpha`?
+    unsigned char* pixels = stbi_load(fullPath, &w, &h, &comp, 0);
+    if (pixels == NULL) {
+        SDL_Log("Failed to load image `%s`\n", fullPath);
         return NULL;
     }
     
-    if (imageData->format != format) {
-        SDL_Surface *next = SDL_ConvertSurface(imageData, format);
-        SDL_DestroySurface(imageData);
-        imageData = next;
-    }
-    
     if (width != NULL) {
-        *width = imageData->w;
+        *width = w;
     }
     
     if (height != NULL) {
-        *height = imageData->h;
+        *height = h;
     }
     
     SDL_GPUTexture* texture = SDL_CreateGPUTexture(device, &(SDL_GPUTextureCreateInfo){
         .type = SDL_GPU_TEXTURETYPE_2D,
         .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-        .width = imageData->w,
-        .height = imageData->h,
+        .width = w,
+        .height = h,
         .layerCountOrDepth = 1,
         .levelCount = 1,
         .usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT
@@ -304,7 +297,7 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
         device,
         &(SDL_GPUTransferBufferCreateInfo) {
             .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            .sizeInBytes = imageData->w * imageData->h * 4
+            .sizeInBytes = w * h * 4
         }
     );
     Uint8* textureTransferPtr = SDL_MapGPUTransferBuffer(
@@ -312,7 +305,7 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
         textureTransferBuffer,
         SDL_FALSE
     );
-    SDL_memcpy(textureTransferPtr, imageData->pixels, imageData->w * imageData->h * 4);
+    SDL_memcpy(textureTransferPtr, pixels, w * h * 4);
     SDL_UnmapGPUTransferBuffer(device, textureTransferBuffer);
     
     SDL_GPUCommandBuffer* uploadCmdBuf = SDL_AcquireGPUCommandBuffer(device);
@@ -325,13 +318,13 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
         },
         &(SDL_GPUTextureRegion){
             .texture = texture,
-            .w = imageData->w,
-            .h = imageData->h,
+            .w = w,
+            .h = h,
             .d = 1
         },
         SDL_FALSE
     );
-    SDL_DestroySurface(imageData);
+    stbi_image_free(pixels);
     SDL_EndGPUCopyPass(copyPass);
     SDL_SubmitGPU(uploadCmdBuf);
     SDL_ReleaseGPUTransferBuffer(device, textureTransferBuffer);
