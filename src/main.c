@@ -7,14 +7,14 @@ int main(void)
         return 1;
     }
     
-    SDL_GPUShader* vertexShader = TinyDraw_Load_Shader("TexturedQuad.vert", 0, 1, 0, 0, SDL_GPU_SHADERSTAGE_VERTEX);
+    SDL_GPUShader* vertexShader = TinyDraw_Load_Shader("sprite.vert", 0, 1, 0, 0, SDL_GPU_SHADERSTAGE_VERTEX);
     if (vertexShader == NULL)
     {
         SDL_Log("Failed to create vertex shader!");
         return -1;
     }
     
-    SDL_GPUShader* fragmentShader = TinyDraw_Load_Shader("TexturedQuad.frag", 1, 0, 0, 0, SDL_GPU_SHADERSTAGE_FRAGMENT);
+    SDL_GPUShader* fragmentShader = TinyDraw_Load_Shader("sprite.frag", 1, 0, 0, 0, SDL_GPU_SHADERSTAGE_FRAGMENT);
     if (fragmentShader == NULL)
     {
         SDL_Log("Failed to create fragment shader!");
@@ -24,7 +24,6 @@ int main(void)
     SDL_GPUGraphicsPipeline* pipeline = TinyDraw_Create_Pipeline(vertexShader, fragmentShader);
     
     SDL_GPUTexture* texture = TinyDraw_Load_Texture("ravioli.bmp", NULL, NULL);
-    // SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("ravioli_inverted.bmp", NULL, NULL);
     SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("tiles_tiny_sample_2.png", NULL, NULL);
     
     SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
@@ -49,20 +48,20 @@ int main(void)
         TinyDraw_Clear(renderTarget);
         
         TinyDraw_Stage_Sprite(
+            (float2){ .x = 0, .y = 48 },
+            (float2){ .x = 128, .y = 128 },
+            (int2){ .x = 0, .y = 0 },
+            (int2){ .x = 32, .y = 32 }
+        );
+        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
+        
+        TinyDraw_Stage_Sprite(
             (float2){ .x = 32, .y = 48 },
             (float2){ .x = 16, .y = 16 },
             (int2){ .x = 0, .y = 0 },
             (int2){ .x = 32, .y = 32 }
         );
         TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
-        
-        TinyDraw_Stage_Sprite(
-            (float2){ .x = 64, .y = 48 },
-            (float2){ .x = 128, .y = 128 },
-            (int2){ .x = 0, .y = 0 },
-            (int2){ .x = 32, .y = 32 }
-        );
-        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         TinyDraw_Stage_Sprite(
             (float2){ .x = 0, .y = 0 },

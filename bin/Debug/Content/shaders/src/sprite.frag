@@ -9,9 +9,7 @@ void main()
 {
 	FragColor = texture(Sampler, TexCoord) * Color;
 	
-	// if (FragColor.rgb == vec3(0, 0, 0)) {
-	// 	FragColor = Color;
-	// }
-	
-	// FragColor.rgb += dFdy(FragColor).rgb * vec3(3, 0, -3);
+	if (FragColor.a == 0) {
+		discard;
+	}
 }

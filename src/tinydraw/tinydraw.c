@@ -207,8 +207,8 @@ SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
                     .colorWriteMask = 0xF,
                     .srcColorBlendFactor = SDL_GPU_BLENDFACTOR_ONE,
                     .srcAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE,
-                    .dstColorBlendFactor = SDL_GPU_BLENDFACTOR_ZERO,
-                    .dstAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ZERO
+                    .dstColorBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .dstAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
                 }
             }},
         },
@@ -261,9 +261,8 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
     int* height
 )
 {
-    SDL_snprintf(fullPath, sizeof(fullPath), "%sContent/Images/%s", basePath, fileName);
+    SDL_snprintf(fullPath, sizeof(fullPath), "%sContent/sprites/%s", basePath, fileName);
     int w, h, comp;
-    // FIXME: use `STBI_rgb_alpha`?
     unsigned char* pixels = stbi_load(fullPath, &w, &h, &comp, 0);
     if (pixels == NULL) {
         SDL_Log("Failed to load image `%s`\n", fullPath);
@@ -344,7 +343,7 @@ SDL_GPUShader* TinyDraw_Load_Shader(
     SDL_snprintf(
         fullPath,
         sizeof(fullPath),
-        "%sContent/Shaders/Compiled/%s.spv",
+        "%sContent/shaders/%s.spv",
         basePath,
         fileName
     );
@@ -415,7 +414,7 @@ void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2
         .z = 0,
         .u = 0,
         .v = 0,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
+        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
     };
     transferData[1] = (Vertex) {
         .x = destPos.x + destSize.x,
@@ -423,7 +422,7 @@ void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2
         .z = 0,
         .u = 1,
         .v = 0,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
+        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
     };
     transferData[2] = (Vertex) {
         .x = destPos.x + destSize.x,
@@ -431,7 +430,7 @@ void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2
         .z = 0,
         .u = 1,
         .v = 1,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
+        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
     };
     transferData[3] = (Vertex) {
         .x = destPos.x,
@@ -439,7 +438,7 @@ void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2
         .z = 0,
         .u = 0,
         .v = 1,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
+        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
     };
     
     spriteBatchCount++;

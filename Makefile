@@ -35,7 +35,7 @@ clean:
 
 .PHONY=shaders
 shaders:
-	cd bin/Debug/Content/Shaders/Source && ./compile.sh
+	cd bin/Debug/Content/shaders/src && ./compile.sh
 
 .PHONY=valgrind
 valgrind:
