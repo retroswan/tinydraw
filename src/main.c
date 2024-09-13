@@ -23,8 +23,8 @@ int main(void)
     
     SDL_GPUGraphicsPipeline* pipeline = TinyDraw_Create_Pipeline(vertexShader, fragmentShader);
     
-    SDL_GPUTexture* texture = TinyDraw_Load_Texture("ravioli.bmp");
-    SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("ravioli_inverted.bmp");
+    SDL_GPUTexture* texture = TinyDraw_Load_Texture("ravioli.bmp", NULL, NULL);
+    SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("ravioli_inverted.bmp", NULL, NULL);
     
     SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
     
@@ -74,7 +74,6 @@ int main(void)
         // Sleep until next frame
         SDL_Delay(1000 / 60);
     }
-    
     
     TinyDraw_Destroy_Pipeline(pipeline);
     

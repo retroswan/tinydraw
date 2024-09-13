@@ -256,7 +256,11 @@ SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
     );
 }
 
-SDL_GPUTexture* TinyDraw_Load_Texture(const char* fileName)
+SDL_GPUTexture* TinyDraw_Load_Texture(
+    const char* fileName,
+    int* width,
+    int* height
+)
 {
     SDL_Surface* imageData;
     SDL_PixelFormat format = SDL_PIXELFORMAT_ABGR8888;
@@ -271,6 +275,14 @@ SDL_GPUTexture* TinyDraw_Load_Texture(const char* fileName)
         SDL_Surface *next = SDL_ConvertSurface(imageData, format);
         SDL_DestroySurface(imageData);
         imageData = next;
+    }
+    
+    if (width != NULL) {
+        *width = imageData->w;
+    }
+    
+    if (height != NULL) {
+        *height = imageData->h;
     }
     
     SDL_GPUTexture* texture = SDL_CreateGPUTexture(device, &(SDL_GPUTextureCreateInfo){

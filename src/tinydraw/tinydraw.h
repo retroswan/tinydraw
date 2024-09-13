@@ -21,7 +21,11 @@ SDL_GPUShader* TinyDraw_Load_Shader(
     SDL_GPUShaderStage stage
 );
 
-SDL_GPUTexture* TinyDraw_Load_Texture(const char* fileName);
+SDL_GPUTexture* TinyDraw_Load_Texture(
+    const char* fileName,
+    int* width,
+    int* height
+);
 
 SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
     SDL_GPUShader* vertexShader,
