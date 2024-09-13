@@ -1,4 +1,5 @@
 #include "tinydraw.h"
+#include <SDL2/SDL_video.h>
 #define SDL_GPU_SHADERCROSS_IMPLEMENTATION
 #include <SDL_gpu_shadercross.h>
 
@@ -165,6 +166,17 @@ int TinyDraw_Init(void)
     SDL_ReleaseGPUTransferBuffer(device, bufferTransferBuffer);
     
     return 1;
+}
+
+void TinyDraw_Resize(int width, int height, char fullscreen)
+{
+    // TODO: might not work everywhere
+    
+    SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+    
+    if (!fullscreen) {
+        SDL_SetWindowSize(window, width, height);
+    }
 }
 
 SDL_GPUTexture* TinyDraw_Create_RenderTarget(int width, int height)

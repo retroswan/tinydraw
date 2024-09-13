@@ -9,6 +9,8 @@
 // Takes basic info about the game; e.g. resolution
 int TinyDraw_Init(void);
 
+void TinyDraw_Resize(int width, int height, char fullscreen);
+
 // Takes a width & height
 SDL_GPUTexture* TinyDraw_Create_RenderTarget(int width, int height);
 

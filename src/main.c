@@ -35,6 +35,9 @@ int main(void)
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 quit = 1;
+            } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_D) {
+                static char fullscreen = 0;
+                TinyDraw_Resize(640, 360, (fullscreen = !fullscreen));
             }
         }
         
