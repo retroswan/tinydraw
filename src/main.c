@@ -1,5 +1,6 @@
-#include <SDL3/SDL.h>
-#include "tinydraw/tinydraw.h"
+#define TINYDRAW_IMPLEMENTATION
+#include "tinydraw.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_MALLOC SDL_malloc
 #define STBI_REALLOC SDL_realloc
@@ -71,8 +72,6 @@ int main(void)
         static float camX = 0, camY = 0;
         // camX += 0.1f;
         // camY += 0.1f;
-        
-        // FIXME: all of these rendering methods should use the same cmdbuf probably?
         
         // Clear
         TinyDraw_Clear(renderTarget);
