@@ -33,12 +33,12 @@ int main(void)
     
     SDL_GPUGraphicsPipeline* pipeline = TinyDraw_Create_Pipeline(vertexShader, fragmentShader);
     
-    SDL_GPUTexture* texture = TinyDraw_Load_Texture("ravioli.bmp", NULL, NULL);
+    SDL_GPUTexture* texture = TinyDraw_Load_Texture("paving 1.png", NULL, NULL);
     SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("tiles_tiny_sample_2.png", NULL, NULL);
     
     SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
     
-    float X = 0, Y = 0;
+    float X = 64, Y = 0;
     
     char quit = 0;
     SDL_Event event;
@@ -87,7 +87,7 @@ int main(void)
         
         TinyDraw_Stage_Sprite(
             (float2){ .x = X, .y = Y },
-            (float2){ .x = 16, .y = 16 },
+            (float2){ .x = 64, .y = 64 },
             (float2){ .x = 0, .y = 0 },
             (float2){ .x = 1, .y = 1 },
             (Color){ 1, 1, 1, 1 }
