@@ -12,7 +12,7 @@
             "program": "${workspaceFolder}/bin/Debug/main",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/working-directory",
+            "cwd": "${workspaceFolder}/bin/Debug",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

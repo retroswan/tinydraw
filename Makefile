@@ -1,10 +1,13 @@
 include .env
 
 CC?=gcc
-CFLAGS_DEBUG?=-g -pedantic -std=c99 -Wall -Wextra -Wmissing-prototypes -Wold-style-definition
+CFLAGS_DEBUG?=-g -std=c99
 CFLAGS_RELEASE?=-O2 -std=c99
 CFLAGS?=${CFLAGS_DEBUG}
+INCS?=
+LIBS?=
 PLATFORM?=Debug
+RPATH?=-Wl,-rpath=./
 
 SRC:=$(wildcard src/*.c src/**/*.c src/**/**/*.c src/**/**/**/*.c src/**/**/**/**/*.c)
 OBJ:=$(patsubst src/%.c, src/%.o, $(SRC))
@@ -13,8 +16,8 @@ OBJ:=$(patsubst src/%.c, src/%.o, $(SRC))
 build:
 	mkdir -p bin
 	mkdir -p bin/${PLATFORM}
-	${foreach file, ${SRC}, ${CC} ${CFLAGS} -c ${file} -o ${patsubst src/%.c, src/%.o, ${file}} &&} echo
-	${CC} ${CFLAGS} ${OBJ} -o bin/${PLATFORM}/main ${RPATH}
+	${foreach file, ${SRC}, ${CC} ${CFLAGS} -c ${file} -o ${patsubst src/%.c, src/%.o, ${file}} ${INCS} &&} echo
+	${CC} ${CFLAGS} ${OBJ} -o bin/${PLATFORM}/main ${LIBS} ${RPATH}
 
 .PHONY=debug
 debug:
@@ -29,6 +32,10 @@ clean:
 	rm -f ${OBJ}
 	rm -f bin/Debug/main
 	rm -f bin/Release/main
+
+.PHONY=shaders
+shaders:
+	cd bin/Debug/Content/shaders/src && ./compile.sh
 
 .PHONY=valgrind
 valgrind:

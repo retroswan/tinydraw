@@ -1,6 +1,8 @@
+.vscode/c_cpp_properties.json
 .vscode/settings.json
-bin/Debug/*
-bin/Release/*
-src/*.o
+bin/Debug/main
+bin/Release/main
+*.o
+*.so.0
 .env
 valgrind.txt
