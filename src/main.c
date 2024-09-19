@@ -1,5 +1,14 @@
 #include <SDL3/SDL.h>
 #include "tinydraw/tinydraw.h"
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_MALLOC SDL_malloc
+#define STBI_REALLOC SDL_realloc
+#define STBI_FREE SDL_free
+#include "vendor/stb_image.h"
+
+#define FRAME(X, Y, WIDTH, HEIGHT, TWIDTH, THEIGHT) \
+    (float2){ .x = X * (WIDTH / TWIDTH), .y = Y * (HEIGHT / THEIGHT) }, \
+    (float2){ .x = (WIDTH / TWIDTH), .y = (HEIGHT / THEIGHT) }
 
 int main(void)
 {
@@ -28,49 +37,70 @@ int main(void)
     
     SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
     
+    float X = 0, Y = 0;
+    
     char quit = 0;
     SDL_Event event;
     while (!quit) {
         // Events
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) {
-                quit = 1;
-            } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_D) {
-                static char fullscreen = 0;
-                TinyDraw_Resize(640, 360, (fullscreen = !fullscreen));
+            switch (event.type) {
+                case SDL_EVENT_QUIT: {
+                    quit = 1;
+                } break;
+                
+                case SDL_EVENT_KEY_DOWN: {
+                    switch (event.key.key) {
+                        case SDLK_D: {
+                            static char fullscreen = 0;
+                            TinyDraw_Resize(640, 360, (fullscreen = !fullscreen));
+                        } break;
+                        
+                        case SDLK_RIGHT: {
+                            X++;
+                        } break;
+                        
+                        case SDLK_DOWN: {
+                            Y++;
+                        } break;
+                    }
+                } break;
             }
         }
         
         static float camX = 0, camY = 0;
-        camX += 0.1f;
-        camY += 0.1f;
+        // camX += 0.1f;
+        // camY += 0.1f;
         
         // FIXME: all of these rendering methods should use the same cmdbuf probably?
         
         // Clear
         TinyDraw_Clear(renderTarget);
         
+        float tilesize = 25;
         TinyDraw_Stage_Sprite(
             (float2){ .x = 0, .y = 48 },
-            (float2){ .x = 128, .y = 128 },
-            (int2){ .x = 0, .y = 0 },
-            (int2){ .x = 32, .y = 32 }
+            (float2){ .x = tilesize, .y = tilesize },
+            FRAME(0, 1, tilesize, tilesize, 250.0f, 250.0f),
+            (Color){ 1, 1, 1, 1 }
         );
         TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         TinyDraw_Stage_Sprite(
-            (float2){ .x = 32, .y = 48 },
+            (float2){ .x = X, .y = Y },
             (float2){ .x = 16, .y = 16 },
-            (int2){ .x = 0, .y = 0 },
-            (int2){ .x = 32, .y = 32 }
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 1, .y = 1 },
+            (Color){ 1, 1, 1, 1 }
         );
         TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         TinyDraw_Stage_Sprite(
             (float2){ .x = 0, .y = 0 },
             (float2){ .x = 160, .y = 90 },
-            (int2){ .x = 0, .y = 0 },
-            (int2){ .x = 32, .y = 32 }
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 1, .y = 1 },
+            (Color){ 1, 1, 1, 1 }
         );
         TinyDraw_Render(pipeline, renderTarget, (float3){ .x = 0, .y = 0, .z = 1.0f }, NULL, 1);
         

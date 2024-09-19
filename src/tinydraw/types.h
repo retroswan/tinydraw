@@ -27,6 +27,11 @@ typedef struct matrix4x4
     float m41, m42, m43, m44;
 } matrix4x4;
 
+typedef struct Color
+{
+    float r, g, b, a;
+} Color;
+
 typedef struct Vertex
 {
     float x, y, z;

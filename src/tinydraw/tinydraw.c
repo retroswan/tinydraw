@@ -3,11 +3,10 @@
 #define SDL_GPU_SHADERCROSS_IMPLEMENTATION
 #include <SDL_gpu_shadercross.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_MALLOC SDL_malloc
-#define STBI_REALLOC SDL_realloc
-#define STBI_FREE SDL_free
-#include "../vendor/stb_image.h"
+// TODO: instead just allow creating a texture with the output from this
+// Which will also allow creating a blank texture
+extern unsigned char* stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp);
+extern void stbi_image_free(void *retval_from_stbi_load);
 
 #define SPRITE_COUNT 1024
 
@@ -397,7 +396,13 @@ SDL_GPUShader* TinyDraw_Load_Shader(
     return shader;
 }
 
-void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2 sourceSize)
+void TinyDraw_Stage_Sprite(
+    float2 destPos,
+    float2 destSize,
+    float2 sourcePos,
+    float2 sourceSize,
+    Color color
+)
 {
     SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(device);
     if (cmdbuf == NULL) {
@@ -424,33 +429,33 @@ void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2
         .x = destPos.x,
         .y = destPos.y,
         .z = 0,
-        .u = 0,
-        .v = 0,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
+        .u = sourcePos.x,
+        .v = sourcePos.y,
+        .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
     transferData[1] = (Vertex) {
         .x = destPos.x + destSize.x,
         .y = destPos.y,
         .z = 0,
-        .u = 1,
-        .v = 0,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
+        .u = sourcePos.x + sourceSize.x,
+        .v = sourcePos.y,
+        .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
     transferData[2] = (Vertex) {
         .x = destPos.x + destSize.x,
         .y = destPos.y + destSize.y,
         .z = 0,
-        .u = 1,
-        .v = 1,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
+        .u = sourcePos.x + sourceSize.x,
+        .v = sourcePos.y + sourceSize.y,
+        .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
     transferData[3] = (Vertex) {
         .x = destPos.x,
         .y = destPos.y + destSize.y,
         .z = 0,
-        .u = 0,
-        .v = 1,
-        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 0.5f,
+        .u = sourcePos.x,
+        .v = sourcePos.y + sourceSize.y,
+        .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
     
     spriteBatchCount++;

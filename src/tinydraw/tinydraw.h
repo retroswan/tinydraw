@@ -35,7 +35,13 @@ SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
 );
 
 // Takes float2 dest pos, float2 dest size, int2 source pos, int2 source size
-void TinyDraw_Stage_Sprite(float2 destPos, float2 destSize, int2 sourcePos, int2 sourceSize);
+void TinyDraw_Stage_Sprite(
+    float2 destPos,
+    float2 destSize,
+    float2 sourcePos,
+    float2 sourceSize,
+    Color color
+);
 
 // Takes:
 // - texture
