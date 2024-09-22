@@ -76,23 +76,29 @@ int main(void)
         // Clear
         TinyDraw_Clear(renderTarget);
         
-        float tilesize = 25;
         TinyDraw_Stage_Sprite(
-            (float2){ .x = 0, .y = 48 },
-            (float2){ .x = tilesize, .y = tilesize },
-            FRAME(0, 1, tilesize, tilesize, 250.0f, 250.0f),
-            (Color){ 1, 1, 1, 1 }
-        );
-        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
-        
-        TinyDraw_Stage_Sprite(
-            (float2){ .x = X, .y = Y },
-            (float2){ .x = 64, .y = 64 },
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 160, .y = 90 },
             (float2){ .x = 0, .y = 0 },
             (float2){ .x = 1, .y = 1 },
             (Color){ 1, 1, 1, 1 }
         );
         TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
+        
+        float tilesize = 25;
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = X, .y = Y },
+            (float2){ .x = tilesize, .y = tilesize },
+            FRAME(3, 4, tilesize, tilesize, 250.0f, 250.0f),
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = X + 32, .y = Y },
+            (float2){ .x = tilesize, .y = tilesize },
+            FRAME(3, 4, tilesize, tilesize, 250.0f, 250.0f),
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         TinyDraw_Stage_Sprite(
             (float2){ .x = 0, .y = 0 },
