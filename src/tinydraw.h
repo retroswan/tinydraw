@@ -615,7 +615,7 @@ void TinyDraw_Stage_Sprite(
     Color color
 )
 {
-    if (!spriteBatchCount) {
+    if (stageCmdbuf == NULL) {
         stageCmdbuf = SDL_AcquireGPUCommandBuffer(device);
         if (stageCmdbuf == NULL) {
             SDL_Log("GPUAcquireCommandBuffer failed");
