@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include <SDL3/SDL.h>
 
-#define TINYDRAW_VERSION "v0.0.2"
+#define TINYDRAW_VERSION "v0.0.1"
 
 // Types
 
@@ -249,12 +249,6 @@ static SDL_GPUTransferBuffer* vertexBufferTransferBuffer = NULL;
 static SDL_GPUBuffer* indexBuffer = NULL;
 static SDL_GPUBuffer* vertexBuffer = NULL;
 static int spriteBatchCount = 0;
-
-// SDL_GPU transfer
-static SDL_GPUCommandBuffer* stageCmdbuf = NULL;
-static SDL_GPUCopyPass* stageCopyPass = NULL;
-static SDL_GPUTransferBuffer* stageTransferBuffer = NULL;
-static Vertex* stageTransferData = NULL;
 
 // SDL_GPU misc
 static SDL_GPUDevice* device = NULL;
@@ -615,29 +609,26 @@ void TinyDraw_Stage_Sprite(
     Color color
 )
 {
-    if (stageCmdbuf == NULL) {
-        stageCmdbuf = SDL_AcquireGPUCommandBuffer(device);
-        if (stageCmdbuf == NULL) {
-            SDL_Log("GPUAcquireCommandBuffer failed");
-            return;
-        }
-        stageCopyPass = SDL_BeginGPUCopyPass(stageCmdbuf);
-        stageTransferBuffer = SDL_CreateGPUTransferBuffer(
-            device,
-            &(SDL_GPUTransferBufferCreateInfo) {
-                .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-                .sizeInBytes = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
-            }
-        );
-        stageTransferData = SDL_MapGPUTransferBuffer(
-            device,
-            stageTransferBuffer,
-            SDL_FALSE
-        );
+    SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(device);
+    if (cmdbuf == NULL) {
+        SDL_Log("GPUAcquireCommandBuffer failed");
+        return;
     }
+    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(cmdbuf);
+    SDL_GPUTransferBuffer* bufferTransferBuffer = SDL_CreateGPUTransferBuffer(
+        device,
+        &(SDL_GPUTransferBufferCreateInfo) {
+            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+            .sizeInBytes = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
+        }
+    );
+    Vertex* transferData = SDL_MapGPUTransferBuffer(
+        device,
+        bufferTransferBuffer,
+        SDL_FALSE
+    );
     
-    const int offset = spriteBatchCount * 4;
-    stageTransferData[offset + 0] = (Vertex) {
+    transferData[0] = (Vertex) {
         .x = destPos.x,
         .y = destPos.y,
         .z = 0,
@@ -645,7 +636,7 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    stageTransferData[offset + 1] = (Vertex) {
+    transferData[1] = (Vertex) {
         .x = destPos.x + destSize.x,
         .y = destPos.y,
         .z = 0,
@@ -653,7 +644,7 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    stageTransferData[offset + 2] = (Vertex) {
+    transferData[2] = (Vertex) {
         .x = destPos.x + destSize.x,
         .y = destPos.y + destSize.y,
         .z = 0,
@@ -661,7 +652,7 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y + sourceSize.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    stageTransferData[offset + 3] = (Vertex) {
+    transferData[3] = (Vertex) {
         .x = destPos.x,
         .y = destPos.y + destSize.y,
         .z = 0,
@@ -671,6 +662,23 @@ void TinyDraw_Stage_Sprite(
     };
     
     spriteBatchCount++;
+    
+    SDL_UploadToGPUBuffer(
+        copyPass,
+        &(SDL_GPUTransferBufferLocation) {
+            .transferBuffer = bufferTransferBuffer,
+            .offset = 0
+        },
+        &(SDL_GPUBufferRegion) {
+            .buffer = vertexBuffer,
+            .offset = 0,
+            .size = sizeof(Vertex) * 4 * spriteBatchCount
+        },
+        SDL_FALSE
+    );
+    SDL_UnmapGPUTransferBuffer(device, bufferTransferBuffer);
+    SDL_EndGPUCopyPass(copyPass);
+    SDL_SubmitGPU(cmdbuf);
 }
 
 void TinyDraw_Render(
@@ -681,31 +689,6 @@ void TinyDraw_Render(
     char clear
 )
 {
-    // First, copy the vertices if there are any
-    if (spriteBatchCount) {
-        SDL_UploadToGPUBuffer(
-            stageCopyPass,
-            &(SDL_GPUTransferBufferLocation) {
-                .transferBuffer = stageTransferBuffer,
-                .offset = 0,
-            },
-            &(SDL_GPUBufferRegion) {
-                .buffer = vertexBuffer,
-                .offset = 0,
-                .size = sizeof(Vertex) * 4 * spriteBatchCount,
-            },
-            SDL_FALSE
-        );
-        SDL_UnmapGPUTransferBuffer(device, stageTransferBuffer);
-        SDL_EndGPUCopyPass(stageCopyPass);
-        SDL_SubmitGPU(stageCmdbuf);
-        
-        stageCmdbuf = NULL;
-        stageCopyPass = NULL;
-        stageTransferBuffer = NULL;
-        stageTransferData = NULL;
-    }
-    
     matrix4x4 cameraMatrix = Matrix4x4_CreateOrthographicOffCenter(
         camera.x,
         camera.x + 160,
