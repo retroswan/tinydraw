@@ -221,7 +221,7 @@ void TinyDraw_Quit(void);
 #ifdef TINYDRAW_IMPLEMENTATION
 
 #define SDL_GPU_SHADERCROSS_IMPLEMENTATION
-#include <SDL_gpu_shadercross.h>
+#include <SDL_shadercross.h>
 
 extern unsigned char* stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp);
 extern void stbi_image_free(void *retval_from_stbi_load);
@@ -286,7 +286,7 @@ int TinyDraw_Init(void)
         return 0;
     }
     
-    device = SDL_CreateGPUDevice(SDL_ShaderCross_GetShaderFormats(), SDL_TRUE, NULL);
+    device = SDL_CreateGPUDevice(SDL_ShaderCross_GetHLSLShaderFormats(), true, NULL);
     if (device == NULL) {
         SDL_Log("Failed to create GPU device");
         return 0;
@@ -298,7 +298,7 @@ int TinyDraw_Init(void)
         return 0;
     }
     
-    if (!SDL_ClaimGPUWindow(device, window)) {
+    if (!SDL_ClaimWindowForGPUDevice(device, window)) {
         SDL_Log("Failed to claim window");
         return 0;
     }
@@ -306,19 +306,19 @@ int TinyDraw_Init(void)
     basePath = SDL_GetBasePath();
     
     sampler = SDL_CreateGPUSampler(device, &(SDL_GPUSamplerCreateInfo){
-        .minFilter = SDL_GPU_FILTER_NEAREST,
-        .magFilter = SDL_GPU_FILTER_NEAREST,
-        .mipmapMode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
-        .addressModeU = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-        .addressModeV = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-        .addressModeW = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+        .min_filter = SDL_GPU_FILTER_NEAREST,
+        .mag_filter = SDL_GPU_FILTER_NEAREST,
+        .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
+        .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+        .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+        .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
     });
     
     vertexBuffer = SDL_CreateGPUBuffer(
         device,
         &(SDL_GPUBufferCreateInfo) {
-            .usageFlags = SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-            .sizeInBytes = sizeof(Vertex) * 4 * SPRITE_COUNT
+            .usage = SDL_GPU_BUFFERUSAGE_VERTEX,
+            .size = sizeof(Vertex) * 4 * SPRITE_COUNT
         }
     );
     SDL_SetGPUBufferName(
@@ -330,8 +330,8 @@ int TinyDraw_Init(void)
     indexBuffer = SDL_CreateGPUBuffer(
         device,
         &(SDL_GPUBufferCreateInfo) {
-            .usageFlags = SDL_GPU_BUFFERUSAGE_INDEX_BIT,
-            .sizeInBytes = sizeof(Uint16) * 6 * SPRITE_COUNT
+            .usage = SDL_GPU_BUFFERUSAGE_INDEX,
+            .size = sizeof(Uint16) * 6 * SPRITE_COUNT
         }
     );
     SDL_SetGPUBufferName(
@@ -343,13 +343,13 @@ int TinyDraw_Init(void)
         device,
         &(SDL_GPUTransferBufferCreateInfo) {
             .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            .sizeInBytes = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
+            .size = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
         }
     );
     Vertex* transferData = SDL_MapGPUTransferBuffer(
         device,
         bufferTransferBuffer,
-        SDL_FALSE
+        false
     );
     Uint16* indexData = (Uint16*) &transferData[4 * SPRITE_COUNT];
     for (int i = 0; i < SPRITE_COUNT; i++) {
@@ -368,7 +368,7 @@ int TinyDraw_Init(void)
     SDL_UploadToGPUBuffer(
         copyPass,
         &(SDL_GPUTransferBufferLocation) {
-            .transferBuffer = bufferTransferBuffer,
+            .transfer_buffer = bufferTransferBuffer,
             .offset = sizeof(Vertex) * 4 * SPRITE_COUNT
         },
         &(SDL_GPUBufferRegion) {
@@ -376,10 +376,10 @@ int TinyDraw_Init(void)
             .offset = 0,
             .size = sizeof(Uint16) * 6 * SPRITE_COUNT
         },
-        SDL_FALSE
+        false
     );
     SDL_EndGPUCopyPass(copyPass);
-    SDL_SubmitGPU(uploadCmdBuf);
+    SDL_SubmitGPUCommandBuffer(uploadCmdBuf);
     SDL_ReleaseGPUTransferBuffer(device, bufferTransferBuffer);
     
     return 1;
@@ -402,9 +402,9 @@ SDL_GPUTexture* TinyDraw_Create_RenderTarget(int width, int height)
             .format = SDL_GetGPUSwapchainTextureFormat(device, window),
             .width = width,
             .height = height,
-            .layerCountOrDepth = 1,
-            .levelCount = 1,
-            .usageFlags = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET_BIT | SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT,
+            .layer_count_or_depth = 1,
+            .num_levels = 1,
+            .usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER,
         }
     );
     
@@ -417,56 +417,60 @@ SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
 )
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
-        .attachmentInfo = {
-            .colorAttachmentCount = 1,
-            .colorAttachmentDescriptions = (SDL_GPUColorAttachmentDescription[]){{
+        // FIXME idk what this got changed to
+        .target_info = {
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[]){{
                 .format = SDL_GetGPUSwapchainTextureFormat(device, window),
-                .blendState = {
-                    .blendEnable = SDL_TRUE,
-                    .alphaBlendOp = SDL_GPU_BLENDOP_ADD,
-                    .colorBlendOp = SDL_GPU_BLENDOP_ADD,
-                    .colorWriteMask = 0xF,
-                    .srcColorBlendFactor = SDL_GPU_BLENDFACTOR_ONE,
-                    .srcAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE,
-                    .dstColorBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .dstAlphaBlendFactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                .blend_state = {
+                    .enable_blend = true,
+                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
+                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
+                    .color_write_mask = 0xF,
+                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
                 }
             }},
+            // TODO: depth buffer info here
+            // .depth_stencil_format = false,
+            .has_depth_stencil_target = false,
         },
-        .vertexInputState = (SDL_GPUVertexInputState){
-            .vertexBindingCount = 1,
-            .vertexBindings = (SDL_GPUVertexBinding[]){{
-                .binding = 0,
-                .inputRate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
-                .instanceStepRate = 0,
-                .stride = sizeof(Vertex)
+        .vertex_input_state = (SDL_GPUVertexInputState){
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]){{
+                .slot = 0,
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                .instance_step_rate = 0,
+                .pitch = sizeof(Vertex)
             }},
-            .vertexAttributeCount = 3,
-            .vertexAttributes = (SDL_GPUVertexAttribute[]){
+            .num_vertex_attributes = 3,
+            .vertex_attributes = (SDL_GPUVertexAttribute[]){
                 {
-                    .binding = 0,
+                    .buffer_slot = 0,
                     .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
                     .location = 0,
                     .offset = 0,
                 },
                 {
-                    .binding = 0,
+                    .buffer_slot = 0,
                     .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
                     .location = 1,
                     .offset = sizeof(float) * 3,
                 },
                 {
-                    .binding = 0,
+                    .buffer_slot = 0,
                     .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
                     .location = 2,
                     .offset = sizeof(float) * 5,
                 },
             },
         },
-        .multisampleState.sampleMask = 0xFFFF,
-        .primitiveType = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
-        .vertexShader = vertexShader,
-        .fragmentShader = fragmentShader,
+        .multisample_state.sample_mask = 0,
+        .primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
+        .vertex_shader = vertexShader,
+        .fragment_shader = fragmentShader,
         // TODO: depth stencil state here
     };
     
@@ -503,20 +507,30 @@ SDL_GPUShader* TinyDraw_Load_Shader(
     SDL_GPUShader* shader;
     SDL_GPUShaderCreateInfo shaderInfo = {
         .code = code,
-        .codeSize = codeSize,
-        .entryPointName = "main",
+        .code_size = codeSize,
+        .entrypoint = "main",
         .format = SDL_GPU_SHADERFORMAT_SPIRV,
         .stage = stage,
-        .samplerCount = samplerCount,
-        .uniformBufferCount = uniformBufferCount,
-        .storageBufferCount = storageBufferCount,
-        .storageTextureCount = storageTextureCount
+        .num_samplers = samplerCount,
+        .num_uniform_buffers = uniformBufferCount,
+        .num_storage_buffers = storageBufferCount,
+        .num_storage_textures = storageTextureCount
     };
     
-    if (SDL_GetGPUDriver(device) == SDL_GPU_DRIVER_VULKAN) {
+    if (strcmp(SDL_GetGPUDeviceDriver(device), "vulkan") == 0) {
         shader = SDL_CreateGPUShader(device, &shaderInfo);
     } else {
-        shader = SDL_ShaderCross_CompileFromSPIRV(device, &shaderInfo, SDL_FALSE);
+        // TODO: possibly wrong parameters
+        SDL_ShaderCross_SPIRV_Info info = {
+            .bytecode = code,
+            .bytecode_size = codeSize,
+            .entrypoint = "main",
+            .props = 0,
+            .shader_stage = stage,
+        };
+        SDL_ShaderCross_GraphicsShaderMetadata* metadata = SDL_ShaderCross_ReflectGraphicsSPIRV(code, codeSize, 0);
+        shader = SDL_ShaderCross_CompileGraphicsShaderFromSPIRV(device, &info, &metadata->resource_info, 0);
+        SDL_free(metadata);
     }
     
     if (shader == NULL) {
@@ -557,22 +571,22 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
         .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
         .width = w,
         .height = h,
-        .layerCountOrDepth = 1,
-        .levelCount = 1,
-        .usageFlags = SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT
+        .layer_count_or_depth = 1,
+        .num_levels = 1,
+        .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
     });
     
     SDL_GPUTransferBuffer* textureTransferBuffer = SDL_CreateGPUTransferBuffer(
         device,
         &(SDL_GPUTransferBufferCreateInfo) {
             .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            .sizeInBytes = w * h * 4
+            .size = w * h * 4
         }
     );
     Uint8* textureTransferPtr = SDL_MapGPUTransferBuffer(
         device,
         textureTransferBuffer,
-        SDL_FALSE
+        false
     );
     SDL_memcpy(textureTransferPtr, pixels, w * h * 4);
     SDL_UnmapGPUTransferBuffer(device, textureTransferBuffer);
@@ -582,7 +596,7 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
     SDL_UploadToGPUTexture(
         copyPass,
         &(SDL_GPUTextureTransferInfo) {
-            .transferBuffer = textureTransferBuffer,
+            .transfer_buffer = textureTransferBuffer,
             .offset = 0,
         },
         &(SDL_GPUTextureRegion){
@@ -591,11 +605,11 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
             .h = h,
             .d = 1
         },
-        SDL_FALSE
+        false
     );
     stbi_image_free(pixels);
     SDL_EndGPUCopyPass(copyPass);
-    SDL_SubmitGPU(uploadCmdBuf);
+    SDL_SubmitGPUCommandBuffer(uploadCmdBuf);
     SDL_ReleaseGPUTransferBuffer(device, textureTransferBuffer);
     
     return texture;
@@ -619,13 +633,13 @@ void TinyDraw_Stage_Sprite(
         device,
         &(SDL_GPUTransferBufferCreateInfo) {
             .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            .sizeInBytes = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
+            .size = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
         }
     );
     Vertex* transferData = SDL_MapGPUTransferBuffer(
         device,
         bufferTransferBuffer,
-        SDL_FALSE
+        false
     );
     
     transferData[0] = (Vertex) {
@@ -666,7 +680,7 @@ void TinyDraw_Stage_Sprite(
     SDL_UploadToGPUBuffer(
         copyPass,
         &(SDL_GPUTransferBufferLocation) {
-            .transferBuffer = bufferTransferBuffer,
+            .transfer_buffer = bufferTransferBuffer,
             .offset = 0
         },
         &(SDL_GPUBufferRegion) {
@@ -674,11 +688,11 @@ void TinyDraw_Stage_Sprite(
             .offset = 0,
             .size = sizeof(Vertex) * 4 * spriteBatchCount
         },
-        SDL_FALSE
+        false
     );
     SDL_UnmapGPUTransferBuffer(device, bufferTransferBuffer);
     SDL_EndGPUCopyPass(copyPass);
-    SDL_SubmitGPU(cmdbuf);
+    SDL_SubmitGPUCommandBuffer(cmdbuf);
 }
 
 void TinyDraw_Render(
@@ -704,18 +718,20 @@ void TinyDraw_Render(
         return;
     }
     Uint32 w, h;
-    SDL_GPUTexture* swapchainTexture = renderTarget
-        ? renderTarget
-        : SDL_AcquireGPUSwapchainTexture(cmdbuf, window, &w, &h);
+    SDL_GPUTexture* swapchainTexture = renderTarget;
+    if (swapchainTexture == NULL) {
+        SDL_AcquireGPUSwapchainTexture(cmdbuf, window, &swapchainTexture, &w, &h);
+    }
+
     if (swapchainTexture != NULL)
     {
-        SDL_GPUColorAttachmentInfo colorAttachmentInfo = { 0 };
+        SDL_GPUColorTargetInfo colorAttachmentInfo = { 0 };
         colorAttachmentInfo.texture = swapchainTexture;
-        colorAttachmentInfo.clearColor = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
-        colorAttachmentInfo.loadOp = clear
+        colorAttachmentInfo.clear_color = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
+        colorAttachmentInfo.load_op = clear
             ? SDL_GPU_LOADOP_CLEAR
             : SDL_GPU_LOADOP_LOAD;
-        colorAttachmentInfo.storeOp = SDL_GPU_STOREOP_STORE;
+        colorAttachmentInfo.store_op = SDL_GPU_STOREOP_STORE;
         
         // TODO: depth stencil (goes where `NULL` is here)
         SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmdbuf, &colorAttachmentInfo, 1, NULL);
@@ -737,14 +753,16 @@ void TinyDraw_Render(
         SDL_EndGPURenderPass(renderPass);
     }
     
-    SDL_SubmitGPU(cmdbuf);
+    SDL_SubmitGPUCommandBuffer(cmdbuf);
     
     spriteBatchCount = 0;
 }
 
 void TinyDraw_Clear(SDL_GPUTexture* renderTarget)
 {
-    TinyDraw_Render(NULL, NULL, (float3){}, renderTarget, 1);
+    float3 camera;
+    memset(&camera, 0, sizeof(camera));
+    TinyDraw_Render(NULL, NULL, camera, renderTarget, 1);
 }
 
 void TinyDraw_Destroy_Pipeline(SDL_GPUGraphicsPipeline* pipeline)
@@ -769,7 +787,7 @@ void TinyDraw_Quit(void)
     SDL_ReleaseGPUBuffer(device, vertexBuffer);
     SDL_ReleaseGPUBuffer(device, indexBuffer);
     SDL_ReleaseGPUSampler(device, sampler);
-    SDL_UnclaimGPUWindow(device, window);
+    SDL_ReleaseWindowFromGPUDevice(device, window);
     SDL_DestroyWindow(window);
     SDL_DestroyGPUDevice(device);
 }

@@ -4,5 +4,7 @@ bin/Debug/main
 bin/Release/main
 *.o
 *.so.0
+*.dll
+*.exe
 .env
 valgrind.txt
