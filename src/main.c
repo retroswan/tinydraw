@@ -36,7 +36,7 @@ int main(void)
     SDL_GPUTexture* texture = TinyDraw_Load_Texture("paving 1.png", NULL, NULL);
     SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("tiles_tiny_sample_2.png", NULL, NULL);
     
-    SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
+    SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(320, 180);
     
     float X = 64, Y = 0;
     
@@ -75,10 +75,26 @@ int main(void)
         
         // Clear
         TinyDraw_Clear(renderTarget);
+
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 160, .y = 90 },
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 1, .y = 1 },
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 160, .y = 90 },
+            (float2){ .x = 160, .y = 90 },
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 1, .y = 1 },
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         float tilesize = 25;
         TinyDraw_Stage_Sprite(
-            (float2){ .x = 0, .y = 48 },
+            (float2){ .x = X, .y = Y },
             (float2){ .x = tilesize, .y = tilesize },
             FRAME(0, 1, tilesize, tilesize, 250.0f, 250.0f),
             (Color){ 1, 1, 1, 1 }
@@ -86,17 +102,8 @@ int main(void)
         TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
         
         TinyDraw_Stage_Sprite(
-            (float2){ .x = X, .y = Y },
-            (float2){ .x = 64, .y = 64 },
             (float2){ .x = 0, .y = 0 },
-            (float2){ .x = 1, .y = 1 },
-            (Color){ 1, 1, 1, 1 }
-        );
-        TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
-        
-        TinyDraw_Stage_Sprite(
-            (float2){ .x = 0, .y = 0 },
-            (float2){ .x = 160, .y = 90 },
+            (float2){ .x = 320, .y = 180 },
             (float2){ .x = 0, .y = 0 },
             (float2){ .x = 1, .y = 1 },
             (Color){ 1, 1, 1, 1 }

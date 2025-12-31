@@ -236,8 +236,8 @@ static char fullPath[256] = "";
 // Game metadata
 const char* title = "TinyDraw Test (" TINYDRAW_VERSION ")";
 const int2 sizeGame = {
-    .x = 160,
-    .y = 90,
+    .x = 320,
+    .y = 180,
 };
 const int2 sizeWindow = {
     .x = 1280,
@@ -615,6 +615,7 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
     return texture;
 }
 
+// TODO: no we shouldn't be uploading to the GPU this often lol
 void TinyDraw_Stage_Sprite(
     float2 destPos,
     float2 destSize,
@@ -675,8 +676,6 @@ void TinyDraw_Stage_Sprite(
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
     
-    spriteBatchCount++;
-    
     SDL_UploadToGPUBuffer(
         copyPass,
         &(SDL_GPUTransferBufferLocation) {
@@ -685,14 +684,16 @@ void TinyDraw_Stage_Sprite(
         },
         &(SDL_GPUBufferRegion) {
             .buffer = vertexBuffer,
-            .offset = 0,
-            .size = sizeof(Vertex) * 4 * spriteBatchCount
+            .offset = (spriteBatchCount) * sizeof(Vertex) * 4,
+            .size = sizeof(Vertex) * 4
         },
         false
     );
     SDL_UnmapGPUTransferBuffer(device, bufferTransferBuffer);
     SDL_EndGPUCopyPass(copyPass);
     SDL_SubmitGPUCommandBuffer(cmdbuf);
+
+    spriteBatchCount++;
 }
 
 void TinyDraw_Render(
@@ -705,8 +706,9 @@ void TinyDraw_Render(
 {
     matrix4x4 cameraMatrix = Matrix4x4_CreateOrthographicOffCenter(
         camera.x,
-        camera.x + 160,
-        camera.y + 90,
+        // TODO: get width from texture?
+        camera.x + sizeGame.x,
+        camera.y + sizeGame.y,
         camera.y,
         0,
         -1
