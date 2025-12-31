@@ -152,6 +152,13 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
 );
 
 /**
+ * Begin staging sprites for the next render pass.
+ *
+ * Grabs a new vertex buffer to transfer to the GPU.
+ */
+void TinyDraw_Stage_Begin();
+
+/**
  * Prepare a sprite to be drawn.
  *
  * @param   float2  destPos
@@ -167,6 +174,13 @@ void TinyDraw_Stage_Sprite(
     float2 sourceSize,
     Color color
 );
+
+/**
+ * End staging sprites for the next render pass.
+ *
+ * Uploads our vertex buffer to the GPU.
+ */
+void TinyDraw_Stage_End();
 
 /**
  * Render staged sprites to the screen, or to a render target.
@@ -245,10 +259,14 @@ const int2 sizeWindow = {
 };
 
 // SDL_GPU spritebatch
-static SDL_GPUTransferBuffer* vertexBufferTransferBuffer = NULL;
+SDL_GPUCommandBuffer* spriteBatchCommandBuffer = NULL;
+SDL_GPUCopyPass* spriteBatchCopyPass = NULL;
 static SDL_GPUBuffer* indexBuffer = NULL;
 static SDL_GPUBuffer* vertexBuffer = NULL;
+static SDL_GPUTransferBuffer* spriteBatchTransferBuffer = NULL;
+static Vertex* spriteBatchVertexTransferBuffer = NULL;
 static int spriteBatchCount = 0;
+static char staging = 0;
 
 // SDL_GPU misc
 static SDL_GPUDevice* device = NULL;
@@ -414,10 +432,8 @@ SDL_GPUTexture* TinyDraw_Create_RenderTarget(int width, int height)
 SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
     SDL_GPUShader* vertexShader,
     SDL_GPUShader* fragmentShader
-)
-{
+) {
     SDL_GPUGraphicsPipelineCreateInfo info = {
-        // FIXME idk what this got changed to
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]){{
@@ -472,6 +488,7 @@ SDL_GPUGraphicsPipeline* TinyDraw_Create_Pipeline(
         .vertex_shader = vertexShader,
         .fragment_shader = fragmentShader,
         // TODO: depth stencil state here
+        // .depth_stencil_state = {0},
     };
     
     return SDL_CreateGPUGraphicsPipeline(
@@ -487,8 +504,7 @@ SDL_GPUShader* TinyDraw_Load_Shader(
     Uint32 storageBufferCount,
     Uint32 storageTextureCount,
     SDL_GPUShaderStage stage
-)
-{
+) {
     SDL_snprintf(
         fullPath,
         sizeof(fullPath),
@@ -615,6 +631,31 @@ SDL_GPUTexture* TinyDraw_Load_Texture(
     return texture;
 }
 
+void TinyDraw_Stage_Begin()
+{
+    SDL_assert(staging == 0);
+    staging = 1;
+
+    spriteBatchCommandBuffer = SDL_AcquireGPUCommandBuffer(device);
+    if (spriteBatchCommandBuffer == NULL) {
+        SDL_Log("GPUAcquireCommandBuffer failed");
+        return;
+    }
+    spriteBatchCopyPass = SDL_BeginGPUCopyPass(spriteBatchCommandBuffer);
+    spriteBatchTransferBuffer = SDL_CreateGPUTransferBuffer(
+        device,
+        &(SDL_GPUTransferBufferCreateInfo) {
+            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+            .size = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
+        }
+    );
+    spriteBatchVertexTransferBuffer = SDL_MapGPUTransferBuffer(
+        device,
+        spriteBatchTransferBuffer,
+        false
+    );
+}
+
 // TODO: no we shouldn't be uploading to the GPU this often lol
 void TinyDraw_Stage_Sprite(
     float2 destPos,
@@ -624,26 +665,11 @@ void TinyDraw_Stage_Sprite(
     Color color
 )
 {
-    SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(device);
-    if (cmdbuf == NULL) {
-        SDL_Log("GPUAcquireCommandBuffer failed");
-        return;
-    }
-    SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(cmdbuf);
-    SDL_GPUTransferBuffer* bufferTransferBuffer = SDL_CreateGPUTransferBuffer(
-        device,
-        &(SDL_GPUTransferBufferCreateInfo) {
-            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            .size = (sizeof(Vertex) * 4 * SPRITE_COUNT) + (sizeof(Uint16) * 6 * SPRITE_COUNT)
-        }
-    );
-    Vertex* transferData = SDL_MapGPUTransferBuffer(
-        device,
-        bufferTransferBuffer,
-        false
-    );
-    
-    transferData[0] = (Vertex) {
+    SDL_assert(staging == 1);
+
+    const int vertexPrefix = spriteBatchCount * 4;
+
+    spriteBatchVertexTransferBuffer[vertexPrefix + 0] = (Vertex) {
         .x = destPos.x,
         .y = destPos.y,
         .z = 0,
@@ -651,7 +677,7 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    transferData[1] = (Vertex) {
+    spriteBatchVertexTransferBuffer[vertexPrefix + 1] = (Vertex) {
         .x = destPos.x + destSize.x,
         .y = destPos.y,
         .z = 0,
@@ -659,7 +685,7 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    transferData[2] = (Vertex) {
+    spriteBatchVertexTransferBuffer[vertexPrefix + 2] = (Vertex) {
         .x = destPos.x + destSize.x,
         .y = destPos.y + destSize.y,
         .z = 0,
@@ -667,7 +693,7 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y + sourceSize.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    transferData[3] = (Vertex) {
+    spriteBatchVertexTransferBuffer[vertexPrefix + 3] = (Vertex) {
         .x = destPos.x,
         .y = destPos.y + destSize.y,
         .z = 0,
@@ -675,25 +701,31 @@ void TinyDraw_Stage_Sprite(
         .v = sourcePos.y + sourceSize.y,
         .r = color.r, .g = color.g, .b = color.b, .a = color.a,
     };
-    
+
+    spriteBatchCount++;
+}
+
+void TinyDraw_Stage_End()
+{
+    SDL_assert(staging == 1);
+    staging = 0;
+
     SDL_UploadToGPUBuffer(
-        copyPass,
+        spriteBatchCopyPass,
         &(SDL_GPUTransferBufferLocation) {
-            .transfer_buffer = bufferTransferBuffer,
+            .transfer_buffer = spriteBatchTransferBuffer,
             .offset = 0
         },
         &(SDL_GPUBufferRegion) {
             .buffer = vertexBuffer,
-            .offset = (spriteBatchCount) * sizeof(Vertex) * 4,
-            .size = sizeof(Vertex) * 4
+            .offset = 0,
+            .size = sizeof(Vertex) * 4 * spriteBatchCount
         },
         false
     );
-    SDL_UnmapGPUTransferBuffer(device, bufferTransferBuffer);
-    SDL_EndGPUCopyPass(copyPass);
-    SDL_SubmitGPUCommandBuffer(cmdbuf);
-
-    spriteBatchCount++;
+    SDL_UnmapGPUTransferBuffer(device, spriteBatchTransferBuffer);
+    SDL_EndGPUCopyPass(spriteBatchCopyPass);
+    SDL_SubmitGPUCommandBuffer(spriteBatchCommandBuffer);
 }
 
 void TinyDraw_Render(
@@ -704,6 +736,8 @@ void TinyDraw_Render(
     char clear
 )
 {
+    SDL_assert(staging == 0);
+
     matrix4x4 cameraMatrix = Matrix4x4_CreateOrthographicOffCenter(
         camera.x,
         // TODO: get width from texture?
