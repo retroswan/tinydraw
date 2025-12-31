@@ -13,7 +13,10 @@
 
 int main(void)
 {
-    if (!TinyDraw_Init()) {
+    int2 gameSize = { .x = 320, .y = 180 };
+    int2 windowSize = { .x = 1280, .y = 720 };
+
+    if (!TinyDraw_Init(gameSize, windowSize)) {
         return 1;
     }
     
@@ -36,9 +39,9 @@ int main(void)
     SDL_GPUTexture* texture = TinyDraw_Load_Texture("paving 1.png", NULL, NULL);
     SDL_GPUTexture* texture2 = TinyDraw_Load_Texture("tiles_tiny_sample_2.png", NULL, NULL);
     
-    SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(160, 90);
+    SDL_GPUTexture* renderTarget = TinyDraw_Create_RenderTarget(gameSize.x, gameSize.y);
     
-    float X = 64, Y = 0;
+    float X = 0, Y = 0;
     
     char quit = 0;
     SDL_Event event;
@@ -75,25 +78,8 @@ int main(void)
         
         // Clear
         TinyDraw_Clear(renderTarget);
-        
-        float tilesize = 25;
-        TinyDraw_Stage_Sprite(
-            (float2){ .x = 0, .y = 48 },
-            (float2){ .x = tilesize, .y = tilesize },
-            FRAME(0, 1, tilesize, tilesize, 250.0f, 250.0f),
-            (Color){ 1, 1, 1, 1 }
-        );
-        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
-        
-        TinyDraw_Stage_Sprite(
-            (float2){ .x = X, .y = Y },
-            (float2){ .x = 64, .y = 64 },
-            (float2){ .x = 0, .y = 0 },
-            (float2){ .x = 1, .y = 1 },
-            (Color){ 1, 1, 1, 1 }
-        );
-        TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
-        
+
+        TinyDraw_Stage_Begin();
         TinyDraw_Stage_Sprite(
             (float2){ .x = 0, .y = 0 },
             (float2){ .x = 160, .y = 90 },
@@ -101,6 +87,42 @@ int main(void)
             (float2){ .x = 1, .y = 1 },
             (Color){ 1, 1, 1, 1 }
         );
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 160, .y = 90 },
+            (float2){ .x = 160, .y = 90 },
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 1, .y = 1 },
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Stage_End();
+        TinyDraw_Render(pipeline, texture, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
+        
+        float tilesize = 25;
+        TinyDraw_Stage_Begin();
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = X, .y = Y },
+            (float2){ .x = tilesize, .y = tilesize },
+            FRAME(3, 4, tilesize, tilesize, 250.0f, 250.0f),
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 128, .y = 72 },
+            (float2){ .x = tilesize, .y = tilesize },
+            FRAME(3, 0, tilesize, tilesize, 250.0f, 250.0f),
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Stage_End();
+        TinyDraw_Render(pipeline, texture2, (float3){ .x = camX, .y = camY, .z = 1.0f }, renderTarget, 0);
+        
+        TinyDraw_Stage_Begin();
+        TinyDraw_Stage_Sprite(
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = gameSize.x, .y = gameSize.y },
+            (float2){ .x = 0, .y = 0 },
+            (float2){ .x = 1, .y = 1 },
+            (Color){ 1, 1, 1, 1 }
+        );
+        TinyDraw_Stage_End();
         TinyDraw_Render(pipeline, renderTarget, (float3){ .x = 0, .y = 0, .z = 1.0f }, NULL, 1);
         
         // Sleep until next frame
