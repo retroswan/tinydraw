@@ -13,7 +13,10 @@
 
 int main(void)
 {
-    if (!TinyDraw_Init()) {
+    int2 gameSize = { .x = 320, .y = 180 };
+    int2 windowSize = { .x = 1280, .y = 720 };
+
+    if (!TinyDraw_Init(gameSize, windowSize)) {
         return 1;
     }
     

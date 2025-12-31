@@ -69,15 +69,31 @@ typedef struct Vertex
     float r, g, b, a;
 } Vertex;
 
+typedef struct TinyDraw_Config {
+    int2 gameSize;
+    int2 windowSize;
+} TinyDraw_Config;
+
 // Function Declarations
 
 /**
  * Initializes SDL3 & SDL_GPU.
  *
+ * @param   int2    gameSize    game's internal resolution. screen will be
+ *                              upscaled to fit within the window size
+ * @param   int2    windowSize  default window size
+ *
  * @return  int truthy for success, falsy for failure. Logs to console on
  *              failure as well.
  */
-int TinyDraw_Init(void);
+int TinyDraw_Init(int2 gameSize, int2 windowSize);
+
+/**
+ * Get a copy of the current config.
+ *
+ * @return  TinyDraw_Config
+ */
+TinyDraw_Config TinyDraw_Config_Get();
 
 /**
  * Resize window & go in or out of fullscreen.
@@ -249,18 +265,11 @@ static char fullPath[256] = "";
 
 // Game metadata
 const char* title = "TinyDraw Test (" TINYDRAW_VERSION ")";
-const int2 sizeGame = {
-    .x = 320,
-    .y = 180,
-};
-const int2 sizeWindow = {
-    .x = 1280,
-    .y = 720,
-};
+TinyDraw_Config config = {0};
 
 // SDL_GPU spritebatch
-SDL_GPUCommandBuffer* spriteBatchCommandBuffer = NULL;
-SDL_GPUCopyPass* spriteBatchCopyPass = NULL;
+static SDL_GPUCommandBuffer* spriteBatchCommandBuffer = NULL;
+static SDL_GPUCopyPass* spriteBatchCopyPass = NULL;
 static SDL_GPUBuffer* indexBuffer = NULL;
 static SDL_GPUBuffer* vertexBuffer = NULL;
 static SDL_GPUTransferBuffer* spriteBatchTransferBuffer = NULL;
@@ -297,8 +306,11 @@ static matrix4x4 Matrix4x4_CreateOrthographicOffCenter(
 
 // Public Methods
 
-int TinyDraw_Init(void)
+int TinyDraw_Init(int2 gameSize, int2 windowSize)
 {
+    config.gameSize = gameSize;
+    config.windowSize = windowSize;
+
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
         return 0;
@@ -310,7 +322,7 @@ int TinyDraw_Init(void)
         return 0;
     }
     
-    window = SDL_CreateWindow(title, sizeWindow.x, sizeWindow.y, 0);
+    window = SDL_CreateWindow(title, windowSize.x, windowSize.y, 0);
     if (window == NULL) {
         SDL_Log("Failed to create window: %s", SDL_GetError());
         return 0;
@@ -401,6 +413,11 @@ int TinyDraw_Init(void)
     SDL_ReleaseGPUTransferBuffer(device, bufferTransferBuffer);
     
     return 1;
+}
+
+TinyDraw_Config TinyDraw_Config_Get()
+{
+    return config;
 }
 
 void TinyDraw_Resize(int width, int height, char fullscreen)
@@ -741,8 +758,8 @@ void TinyDraw_Render(
     matrix4x4 cameraMatrix = Matrix4x4_CreateOrthographicOffCenter(
         camera.x,
         // TODO: get width from texture?
-        camera.x + sizeGame.x,
-        camera.y + sizeGame.y,
+        camera.x + config.gameSize.x,
+        camera.y + config.gameSize.y,
         camera.y,
         0,
         -1

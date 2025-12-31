@@ -14,8 +14,6 @@ OBJ:=$(patsubst src/%.c, src/%.o, $(SRC))
 
 .PHONY=build
 build:
-# 	mkdir -p bin
-# 	mkdir -p bin/${PLATFORM}
 	${foreach file, ${SRC}, ${CC} ${CFLAGS} -c ${file} -o ${patsubst src/%.c, src/%.o, ${file}} ${INCS} &&} echo
 	${CC} ${CFLAGS} ${OBJ} -o bin/${PLATFORM}/main ${LIBS} ${RPATH}
 
